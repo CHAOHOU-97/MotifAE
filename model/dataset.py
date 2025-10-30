@@ -13,10 +13,9 @@ class ProteinDataset(Dataset):
         df_name_col: the name of the sequence, which can be used to find the saved embedding and logits
         embed_logit_path: the file path for saved embedding and logits 
     '''
-    def __init__(self, df, df_name_col, embed_logit_path, stage):
+    def __init__(self, df, df_name_col, embed_logit_path):
         self.names = df[df_name_col]
         self.embed_logit_path = embed_logit_path
-        self.stage = stage
 
     def __len__(self):
         return len(self.names)
@@ -37,14 +36,10 @@ class ProteinDataset(Dataset):
         name = self.names[idx]
         item['name'] = name
         
-        file_path = os.path.join(self.embed_logit_path, re.split(r'[-_]', name)[0][-2:], f'{name}.npz') # name.split('-')[0] can get the name for isoform
+        file_path = os.path.join(self.embed_logit_path, re.split(r'[-_]', name)[0][-2:], f'{name}.npz')
         loaded = np.load(file_path)
 
-        if self.stage == 'representative':
-            item['repr'] = torch.tensor(loaded['repr'])
-            # item['logit'] = torch.tensor(loaded['logit'])
-        elif self.stage == 'human':
-            item['repr'] = torch.tensor(loaded['arr_0'])
+        item['repr'] = torch.tensor(loaded['repr'])
 
         return item
     
@@ -54,7 +49,5 @@ def collate_batch(batch):
     '''
     batch_collated = {}
     batch_collated['repr'] = torch.cat([b['repr'] for b in batch], dim=0)
-
-    # batch_collated['logit'] = torch.cat([b['logit'] for b in batch], dim=0)
 
     return batch_collated

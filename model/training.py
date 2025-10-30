@@ -20,18 +20,16 @@ def train_run(data, my_config, trainer: SAETrainer):
     Train a Sparse Autoencoder with configurable training parameters and logging.
 
     The training loop:
-    1. mkdirs and save config files
-    2. For each batch of activations:
+    For each batch of activations:
         - Computes loss and updates model
         - Logs metrics
         - Saves checkpoints
     """
-    stage = my_config['stage']
 
     # Training loop
-    step = my_config[f'start_step_{stage}']
+    step = my_config['start_step']
     start_time = time.time()
-    for epoch in range(my_config[f'n_epoch_{stage}']):
+    for epoch in range(my_config['n_epoch']):
         for batch_data in data:
             act = batch_data['repr'].to(my_config["device"])
             

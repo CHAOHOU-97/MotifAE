@@ -130,19 +130,13 @@ class StandardTrainer(SAETrainer):
     def __init__(self, my_config, dict_class=AutoEncoder):
         super().__init__(my_config['seed'])
 
-        self.stage = my_config['stage']
-
         # Set random seeds
         if my_config['seed'] is not None:
             t.manual_seed(my_config['seed'])
             t.cuda.manual_seed_all(my_config['seed'])
 
         # Initialize autoencoder
-        if self.stage == 'representative':
-            self.ae = dict_class(my_config['activation_dim'], my_config['dict_size'], tied=my_config['tied'])
-        elif self.stage == 'human':
-            chk_path = os.path.join(my_config['save_dir'], "checkpoints", f"step_{my_config['start_step_human']}.pt")
-            self.ae = dict_class.from_pretrained(chk_path)
+        self.ae = dict_class(my_config['activation_dim'], my_config['dict_size'], tied=my_config['tied'])
 
         # Training parameters
         self.dict_size = my_config['dict_size']
@@ -172,21 +166,6 @@ class StandardTrainer(SAETrainer):
             constrained_params=self.ae.decoder.parameters(),
             lr=self.lr
         )
-
-        # Setup learning rate warmup with linear decay
-        # if resample_steps is None:
-        #     def warmup_fn(step):
-        #         if step <= warmup_steps:
-        #             return step / warmup_steps
-        #         else:
-        #             return 1 + (step - warmup_steps)*(0.1-1)/(steps - warmup_steps)
-        # else:
-        #     def warmup_fn(step):
-        #         step_new = step % resample_steps
-        #         if step_new <= warmup_steps:
-        #             return step_new / warmup_steps
-        #         else:
-        #             return 1 + (step_new - warmup_steps)*(0.1-1)/(resample_steps - warmup_steps)
         
         # Setup learning rate warmup
         if self.resample_steps is None:
@@ -224,11 +203,6 @@ class StandardTrainer(SAETrainer):
         with t.no_grad():
             if deads.sum() == 0:
                 return
-            
-            # with open(os.path.join(self.save_dir, "dead_neuron.log"), "a") as f:
-            #     f.write(f"step:{step}, n_dead_neuron:{deads.sum().item()}\n")
-
-            # print(f"resampling {deads.sum().item()} neurons")
 
             # Compute reconstruction loss for each activation
             losses = (activations - self.ae(activations)).norm(dim=-1)
@@ -282,25 +256,20 @@ class StandardTrainer(SAETrainer):
         l2_loss = t.linalg.norm(x - x_hat, dim=-1).mean()
         l1_loss = f.norm(p=1, dim=-1).mean()
 
-        # smooth_loss = (f[2:]/2 + f[:-2]/2 - f[1:-1]).norm(p=1, dim=-1).mean()
-
-        # nearby_loss = (t.cat([f[:-6].unsqueeze(0), f[1:-5].unsqueeze(0), f[2:-4].unsqueeze(0), f[4:-2].unsqueeze(0), f[5:-1].unsqueeze(0), f[6:].unsqueeze(0)], dim=0) - f[3:-3].unsqueeze(0)).norm(p=1, dim=-1).mean(dim=-1)
-        # nearby_loss = (t.cat([f[1:-2].unsqueeze(0), f[2:-1].unsqueeze(0), f[3:].unsqueeze(0)], dim=0) - f[0:-3].unsqueeze(0)).norm(p=1, dim=-1).mean(dim=-1)
-        # smooth_loss = self.softmin(nearby_loss)@nearby_loss
-
-        nearby_loss = (t.cat([f[1:-2].unsqueeze(0), f[2:-1].unsqueeze(0), f[3:].unsqueeze(0)], dim=0) - f[0:-3].unsqueeze(0)).norm(p=1, dim=-1)
-        smooth_loss = (self.softmin(nearby_loss)*nearby_loss).sum(dim=0).mean()
+        # local similarity loss
+        nearby_difference = (t.cat([f[1:-2].unsqueeze(0), f[2:-1].unsqueeze(0), f[3:].unsqueeze(0)], dim=0) - f[0:-3].unsqueeze(0)).norm(p=1, dim=-1)
+        local_similarity_loss = (self.softmin(nearby_difference)*nearby_difference).sum(dim=0).mean()
 
         if self.smooth_penalty > 0:
-            loss = l2_loss + self.current_l1_penalty * (l1_loss + smooth_loss*self.smooth_penalty)
+            loss = l2_loss + self.current_l1_penalty * (l1_loss + local_similarity_loss*self.smooth_penalty)
         else:
             loss = l2_loss + self.current_l1_penalty * l1_loss
 
         loss_log = {
-                "l2_loss": l2_loss.item() / 1280,
+                "l2_loss": l2_loss.item() / 1280, # 1280 is the dimension of the ESM2-650M embedding
                 "mse_loss": (x - x_hat).pow(2).mean().item(),
                 "sparsity_loss": l1_loss.item(),
-                "smooth_loss": smooth_loss.item(),
+                "local_similarity_loss": local_similarity_loss.item(),
                 "loss": loss.item(),
                 "lr": self.current_lr,
                 "l1_penalty": self.current_l1_penalty}
@@ -349,5 +318,5 @@ class StandardTrainer(SAETrainer):
         if self.resample_steps is not None and step % self.resample_steps == 0:
             if step <= self.resample_training_steps:
                 self.resample_neurons(
-                    self.steps_since_active > self.resample_steps / 1.2, activations, step,
+                    self.steps_since_active > self.resample_steps, activations, step,
                 )
