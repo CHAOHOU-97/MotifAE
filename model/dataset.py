@@ -1,21 +1,18 @@
 import os
-import pandas as pd
 import numpy as np
 import torch
-from torch.utils.data import Dataset, DataLoader
-import re
+from torch.utils.data import Dataset
 
 class ProteinDataset(Dataset):
     '''
-    return the sequence token, ESM embedding and final logits
     Arg:
         df: the dataframe with name and sequence infomation of 2.3M representative sequences
-        df_name_col: the name of the sequence, which can be used to find the saved embedding and logits
-        embed_logit_path: the file path for saved embedding and logits 
+        df_name_col: the name of the sequence, which can be used to find the saved embedding
+        embed_path: the file path for saved embedding
     '''
-    def __init__(self, df, df_name_col, embed_logit_path):
+    def __init__(self, df, df_name_col, embed_path):
         self.names = df[df_name_col]
-        self.embed_logit_path = embed_logit_path
+        self.embed_path = embed_path
 
     def __len__(self):
         return len(self.names)
@@ -36,10 +33,10 @@ class ProteinDataset(Dataset):
         name = self.names[idx]
         item['name'] = name
         
-        file_path = os.path.join(self.embed_logit_path, re.split(r'[-_]', name)[0][-2:], f'{name}.npz')
+        file_path = os.path.join(self.embed_path, f'{name}.npz')
         loaded = np.load(file_path)
 
-        item['repr'] = torch.tensor(loaded['repr'])
+        item['repr'] = torch.tensor(loaded['repr'][0])
 
         return item
     

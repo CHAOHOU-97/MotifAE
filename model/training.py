@@ -6,28 +6,13 @@ import json
 import os
 import time
 import torch as t
-import numpy as np
 from dictionary import AutoEncoder
 from trainer import SAETrainer
 from config import my_config
-import shutil
-from torch.cuda.amp import autocast, GradScaler
-
-
 
 def train_run(data, my_config, trainer: SAETrainer):
-    """
-    Train a Sparse Autoencoder with configurable training parameters and logging.
-
-    The training loop:
-    For each batch of activations:
-        - Computes loss and updates model
-        - Logs metrics
-        - Saves checkpoints
-    """
-
     # Training loop
-    step = my_config['start_step']
+    step = 0
     start_time = time.time()
     for epoch in range(my_config['n_epoch']):
         for batch_data in data:
@@ -71,12 +56,12 @@ def train_run(data, my_config, trainer: SAETrainer):
                     log["batch_tokens"] = act.shape[0]
 
                     # write the log to file
-                    with open(os.path.join(my_config['save_dir'], f"training_log_{stage}.json"), "a") as f:
+                    with open(os.path.join(my_config['save_dir'], f"training_log.json"), "a") as f:
                         json.dump(log, f)
                         f.write('\n')
 
             # Save checkpoints
-            if my_config[f'save_steps_{stage}'] is not None and ((step % my_config[f'save_steps_{stage}'] == 0)):
+            if my_config['save_steps'] is not None and ((step % my_config['save_steps'] == 0)):
                 chk_path = os.path.join(my_config['save_dir'], "checkpoints", f"step_{step}.pt")
                 if not os.path.exists(chk_path):
                     t.save(trainer.ae.state_dict(),chk_path)

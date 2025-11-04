@@ -22,7 +22,7 @@ def random_sample(sequence, max_length):
 df[my_config['df_seq_col']] = df['sequence'].apply(random_sample, max_length = max_length)
 
 # Load ESM model
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device(my_config['device'] if torch.cuda.is_available() else "cpu")
 
 model, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
 model.eval()
@@ -44,7 +44,6 @@ for i in df.index:
     repr = outputs['representations'][33].cpu()
 
     label = batch_labels[0]
-    # organize by the last two letters of the uniprot id in folders
-    save_path = os.path.join(my_config['embed_logit_path'], re.split(r'[-_]', label)[0][-2:], f'{label}.npz')
+    save_path = os.path.join(my_config['embed_path'], f'{label}.npz')
 
     np.savez_compressed(save_path, repr=repr.numpy())

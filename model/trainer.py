@@ -101,30 +101,7 @@ class ConstrainedAdam(t.optim.Adam):
 
 class StandardTrainer(SAETrainer):
     """
-    Standard SAE training implementation with L1 sparsity and neuron resampling.
-
-    Implements training with:
-    - L1 sparsity penalty
-    - Learning rate warmup
-    - Dead neuron detection and resampling
-    - L1 penalty annealing
-
-    Args:
-        dict_class: Autoencoder class to use (default: AutoEncoder)
-        activation_dim: Dimension of input activations
-        dict_size: Size of the learned dictionary
-        lr: Learning rate
-        l1_penalty: Final L1 penalty coefficient
-        warmup_steps: Steps for learning rate warmup
-        l1_annealing_pct: Fraction of training to anneal L1 penalty
-        steps: Total training steps
-        resample_steps: Frequency of neuron resampling
-        seed: Random seed
-        device: Computing device
-        layer: Model layer being processed
-        plm_name: Protein language model name
-        wandb_name: W&B run name
-        submodule_name: Name of processed submodule
+    SAE training implementation with L1 sparsity and local similarity loss.
     """
 
     def __init__(self, my_config, dict_class=AutoEncoder):
@@ -138,12 +115,12 @@ class StandardTrainer(SAETrainer):
         # Initialize autoencoder
         self.ae = dict_class(my_config['activation_dim'], my_config['dict_size'], tied=my_config['tied'])
 
-        # Training parameters
+        # Training hyperparameters and settings
         self.dict_size = my_config['dict_size']
         self.l1_penalty = my_config['l1_penalty']
         self.softmin = t.nn.Softmin(dim=0)
 
-        self.smooth_penalty = my_config['smooth_penalty']
+        self.local_similarity_relative_penalty = my_config['local_similarity_relative_penalty']
         self.save_dir = my_config['save_dir']
         self.lr = my_config['lr']
         self.warmup_steps = my_config['warmup_steps']
@@ -151,9 +128,8 @@ class StandardTrainer(SAETrainer):
         self.device = my_config['device']
         self.ae.to(self.device)
 
-        # Resampling setup
+        # Resampling setup: not used in MotifAE training
         self.resample_steps = my_config['resample_steps']
-        self.resample_training_steps = my_config['resample_training_steps']
         if self.resample_steps is not None:
             # Track steps since each neuron was last active
             self.steps_since_active = t.zeros(self.ae.dict_size, dtype=int).to(self.device)
@@ -192,13 +168,9 @@ class StandardTrainer(SAETrainer):
         else:
             self.current_l1_penalty = self.final_l1_penalty
 
-    def resample_neurons(self, deads, activations, step):
+    def resample_neurons(self, deads, activations):
         """
         Resample inactive neurons using high-loss activations.
-
-        Args:
-            deads: Boolean tensor indicating inactive neurons
-            activations: Current batch of activations for resampling
         """
         with t.no_grad():
             if deads.sum() == 0:
@@ -260,8 +232,8 @@ class StandardTrainer(SAETrainer):
         nearby_difference = (t.cat([f[1:-2].unsqueeze(0), f[2:-1].unsqueeze(0), f[3:].unsqueeze(0)], dim=0) - f[0:-3].unsqueeze(0)).norm(p=1, dim=-1)
         local_similarity_loss = (self.softmin(nearby_difference)*nearby_difference).sum(dim=0).mean()
 
-        if self.smooth_penalty > 0:
-            loss = l2_loss + self.current_l1_penalty * (l1_loss + local_similarity_loss*self.smooth_penalty)
+        if self.local_similarity_relative_penalty > 0:
+            loss = l2_loss + self.current_l1_penalty * (l1_loss + local_similarity_loss*self.local_similarity_relative_penalty)
         else:
             loss = l2_loss + self.current_l1_penalty * l1_loss
 
@@ -318,5 +290,5 @@ class StandardTrainer(SAETrainer):
         if self.resample_steps is not None and step % self.resample_steps == 0:
             if step <= self.resample_training_steps:
                 self.resample_neurons(
-                    self.steps_since_active > self.resample_steps, activations, step,
+                    self.steps_since_active > self.resample_steps, activations
                 )
