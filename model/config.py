@@ -1,6 +1,6 @@
 my_config = {
     # before training the model, please set the following paths
-    "df_path": 'your_dataframe_path.csv', # download it from zenodo
+    "df_path": 'your_dataframe_path.csv', # download it from zenodo: https://zenodo.org/records/17488191
     "embed_path": 'your_embed_path', # path to save embeddings
     "save_dir": 'your_save_dir', # path to save model and log
 
