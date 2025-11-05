@@ -24,6 +24,6 @@ my_config = {
     "seed": 42,
 
     "n_epoch": 2,
-    "save_steps": 5_000,
-    "log_steps": 20,
+    "save_steps": 5_000, # save checkpoint every save_steps
+    "log_steps": 20, # log every log_steps
 }
