@@ -16,6 +16,8 @@ pip install torch==2.4.1 torchvision==0.19.1 torchaudio==2.4.1 --index-url https
 ```
 Other environments with the necessary dependencies should also work as long as PyTorch and ESM are properly installed.
 
+-----
+
 ## Use Pre-trained Models
 
 The weights for the trained MotifAE model can be downloaded from [Zenodo](https://zenodo.org/records/17488191).
