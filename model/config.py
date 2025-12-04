@@ -19,7 +19,7 @@ my_config = {
     "warmup_steps": 500, # learning rate warmup
 
     "l1_penalty": 0.04, # for SAE, set l1_penalty to 0.85
-    "local_similarity_relative_penalty": 1, # this is the relative value compared to L1 penalty. for SAE, set local_similarity_penalty to 0
+    "smoothness_relative_penalty": 1, # this is the relative value compared to L1 penalty. for SAE, set smoothness_relative_penalty to 0
     "l1_annealing_steps": 5000,
     "seed": 42,
 

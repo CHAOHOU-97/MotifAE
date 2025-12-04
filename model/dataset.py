@@ -6,9 +6,9 @@ from torch.utils.data import Dataset
 class ProteinDataset(Dataset):
     '''
     Arg:
-        df: the dataframe with name and sequence infomation of 2.3M representative sequences
-        df_name_col: the name of the sequence, which can be used to find the saved embedding
-        embed_path: the file path for saved embedding
+        df: the dataframe with names and sequences of 2.3M representative proteins
+        df_name_col: protein names, which can be used to find the saved embedding
+        embed_path: the path for saved embedding
     '''
     def __init__(self, df, df_name_col, embed_path):
         self.names = df[df_name_col]
@@ -42,7 +42,7 @@ class ProteinDataset(Dataset):
     
 def collate_batch(batch):
     '''
-    concatenate tensors for different proteins
+    concatenate tensors of different proteins
     '''
     batch_collated = {}
     batch_collated['repr'] = torch.cat([b['repr'] for b in batch], dim=0)
