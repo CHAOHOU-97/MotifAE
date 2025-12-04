@@ -1,4 +1,4 @@
-## MotifAE: Unsupervised Discovery of Functional Motifs from Protein Language Model
+## MotifAE: Unsupervised Discovery of Functional Sequence Patterns from Protein Language Model
 
 MotifAE is a sparse autoencoder with an additional smoothness loss, designed for the unsupervised discovery of functional sequence patterns from Protein Language Model (we used ESM2-650M here). The smoothness loss encourages the latent features to capture meaningful, coherent patterns in the protein sequences.
 ![MotifAE architecture](./image/motifae.png)
