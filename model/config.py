@@ -20,6 +20,7 @@ my_config = {
 
     "l1_penalty": 0.04, # for SAE, set l1_penalty to 0.85
     "smoothness_relative_penalty": 1, # this is the relative value compared to L1 penalty. for SAE, set smoothness_relative_penalty to 0
+    "smoothness_window": 3, # we used window size of 3 for default, we also provide weights for models with window size of 4 and 5.
     "l1_annealing_steps": 5000,
     "seed": 42,
 

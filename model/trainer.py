@@ -121,6 +121,7 @@ class StandardTrainer(SAETrainer):
         self.softmin = t.nn.Softmin(dim=0)
 
         self.smoothness_relative_penalty = my_config['smoothness_relative_penalty']
+        self.smooth_window = my_config['smoothness_window']
         self.save_dir = my_config['save_dir']
         self.lr = my_config['lr']
         self.warmup_steps = my_config['warmup_steps']
@@ -210,7 +211,24 @@ class StandardTrainer(SAETrainer):
         """Get current optimizer learning rate."""
         return self.optimizer.param_groups[0]["lr"]
 
+    def smoothness_loss(self, f, window=3):
+        """
+        f: (L, D) latent activations for one sequence
+        window: number of forward neighbors to compare against (w >= 1)
+        Returns: scalar loss
+        """
+        L, D = f.shape
+        if L <= window:
+            return f.new_zeros(())
 
+        base = f[:-window]                                        # (L-w, D)
+        dists = [(f[k : k + (L - window)] - base).norm(p=1, dim=-1)
+                for k in range(1, window + 1)]                   # list of (L-w,)
+        nearby_loss = t.stack(dists, dim=0)                       # (w, L-w)
+
+        smooth_loss = (self.softmin(nearby_loss) * nearby_loss).sum(dim=0).mean()
+        return smooth_loss
+    
     def loss(self, x, logging=False, **kwargs):
         """
         Compute loss for current batch.
@@ -228,11 +246,9 @@ class StandardTrainer(SAETrainer):
         l2_loss = t.linalg.norm(x - x_hat, dim=-1).mean()
         l1_loss = f.norm(p=1, dim=-1).mean()
 
-        # smoothness loss
-        nearby_difference = (t.cat([f[1:-2].unsqueeze(0), f[2:-1].unsqueeze(0), f[3:].unsqueeze(0)], dim=0) - f[0:-3].unsqueeze(0)).norm(p=1, dim=-1)
-        smoothness_loss = (self.softmin(nearby_difference)*nearby_difference).sum(dim=0).mean()
-
         if self.smoothness_relative_penalty > 0:
+            smoothness_loss = self.smoothness_loss(f, window=self.smooth_window)
+
             loss = l2_loss + self.current_l1_penalty * (l1_loss + smoothness_loss*self.smoothness_relative_penalty)
         else:
             loss = l2_loss + self.current_l1_penalty * l1_loss
@@ -241,7 +257,7 @@ class StandardTrainer(SAETrainer):
                 "l2_loss": l2_loss.item() / 1280, # 1280 is the dimension of the ESM2-650M embedding
                 "mse_loss": (x - x_hat).pow(2).mean().item(),
                 "sparsity_loss": l1_loss.item(),
-                "smoothness_loss": smoothness_loss.item(),
+                "smoothness_loss": smoothness_loss.item() if self.smoothness_relative_penalty > 0 else 0,
                 "loss": loss.item(),
                 "lr": self.current_lr,
                 "l1_penalty": self.current_l1_penalty}

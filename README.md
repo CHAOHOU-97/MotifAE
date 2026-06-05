@@ -20,7 +20,7 @@ Other environments with the necessary dependencies should also work as long as P
 
 ## Use Pre-trained Models
 
-The weights for the trained MotifAE model can be downloaded from [Zenodo](https://zenodo.org/records/17488191).
+The weights for the trained MotifAE model can be downloaded from [Zenodo](https://zenodo.org/records/20547228).
 
 ### Compare MotifAE Features with Known Motifs
 Please refer to 
@@ -33,7 +33,7 @@ Please refer to
 ### MotifAE-G for Feature Alignment with Experimental Data and Protein Design
 To use MotifAE-G for aligning latent features with experimental data — for example, domain folding stability — follow the steps below:
 
-1. The information for proteins with stability mutational scanning is provided in [`data/412pro_info.csv`](./data/412pro_info.csv). Please download the corresponding mutation effect data (412pros_ddG_ML.csv) from [Zenodo](https://zenodo.org/records/17488191).
+1. The information for proteins with stability mutational scanning is provided in [`data/412pro_info.csv`](./data/412pro_info.csv). Please download the corresponding mutation effect data (412pros_ddG_ML.csv) from [Zenodo](https://zenodo.org/records/20547228).
 2. Process these data using code in [`gate/1_stability_prepare.ipynb`](./gate/1_stability_prepare.ipynb)
 3. Train MotifAE-G to align latent features with experimental measurements: [`gate/2_gate_model.ipynb`](./gate/2_gate_model.ipynb)  
 4. Designing proteins with enhanced stability by steering stability-associated latent features: [`gate/3_protein_design.ipynb`](./gate/3_protein_design.ipynb)  
@@ -46,7 +46,7 @@ To train the MotifAE from scratch, follow the steps below.
 
 ### Step 1: Download Representative Protein Sequences
 
-Download the dataset of 2.3 million representative proteins from [Zenodo](https://zenodo.org/records/17488191).  
+Download the dataset of 2.3 million representative proteins from [Zenodo](https://zenodo.org/records/20547228).  
 This dataset was derived through [structure-based clustering of the AlphaFold structure database](https://afdb-cluster.steineggerlab.workers.dev/).
 
 
